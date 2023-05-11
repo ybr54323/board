@@ -1,0 +1,28 @@
+body {
+  padding: 50px;
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+}
+
+a {
+  color: #00b7ff;
+}
+
+.input {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  outline: 1px solid blue;
+}
+.editor {
+  position: relative;
+}
+* {
+  margin: 0;
+}
+
+.editor {
+  outline: none;
+  /* min-height: 1rem; */
+}
