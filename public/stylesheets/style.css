@@ -26,3 +26,7 @@ a {
   outline: none;
   /* min-height: 1rem; */
 }
+
+.none  {
+  font-style: unset;
+}

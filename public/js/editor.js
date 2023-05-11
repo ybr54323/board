@@ -18,112 +18,110 @@ function insertAfter(newElement, targetElement) {
 }
 
 window.onload = function () {
-  let token = "";
+  const f = document.querySelector("#board");
 
   const rules = [
     // # foo
-    /^#+\s$/,
+    /#+(\s|&nbsp;)/,
     // *foo*
-    /^(\*+)\S+\1\s$/g,
+    /(\*+)\S+\1(\s|&nbsp;)/g,
     // // 1. foo
-    // /\d+\.\s/,
+    /\d+\.(\s|&nbsp;)\S+/,
     // // -. foo
-    // /^-\.$/,
+    /-\.(\s|&nbsp;)\S+/,
     // // ~foo~
-    // /^(~+)\w+\1$/,
+    /(~+)\w+\1(\s|&nbsp;)/,
     // // `foo`
-    // /^(`+)\w+\1$/,
+    /(`+)\w+\1(\s|&nbsp;)/,
   ];
-  const ignoreKeys = ["Backspace", "Control", "Shift", "Enter", "Alt"];
 
-  const clearKeys = ["Enter"];
-  editor.addEventListener("keypress", function (e) {
-    setTimeout(() => {
-      const selection = window.getSelection();
-      const { anchorNode } = selection;
-      if (anchorNode.nodeType !== 3) return;
+  editor.addEventListener(
+    "keypress",
+    function (e) {
+      setTimeout(function () {
+        const selection = window.getSelection();
 
-      console.log(anchorNode);
-      const list = anchorNode.textContent.split(" ");
-      const tail = list[list.length - 1];
-      console.warn(tail);
+        const { anchorNode } = selection;
 
-      // console.warn(anchorNode.nodeType);
+        const { nodeType } = anchorNode;
 
-      let found = false;
-      let inline = false;
-
-      for (let i = 0, len = rules.length; i < len && !found; i++) {
-        const rule = rules[i];
-        if (tail.match(rule)) {
-          found = true;
-          if (i == 0) inline = false;
-          else inline = true;
-          break;
+        /**
+         * 在offset为0时的selection
+         */
+        if (nodeType === 1) {
+          console.log((anchorNode.outerHTML = "<div class='none'><br></div>"));
         }
-      }
-      if (found) {
-        const parser = marked[inline ? "parseInline" : "parse"];
-        if (inline) {
-        } else {
+        /**
+         * 在offset为>0时的selection
+         */
+        if (nodeType === 3) {
+          const { parentElement, textContent } = anchorNode;
+          console.log({ textContent, parentElement: parentElement.innerHTML });
+          let found = false;
+          let exec;
+          let inline;
+          let outerIndex;
+          let index;
+          let tokenLen = 0;
+
+          for (let i = 0, len = rules.length; i < len; i++) {
+            const rule = rules[i];
+            exec = rule.exec(parentElement.innerHTML);
+            if (exec) {
+              index = exec.index;
+              found = true;
+              console.log(exec);
+              tokenLen = exec[0].length;
+              rule.lastIndex = 0;
+              inline = i !== 0 && i !== 2;
+              outerIndex = i;
+              break;
+            }
+          }
+          if (found) {
+            const chars = parentElement.innerHTML.split("");
+            const l = chars.slice(0, index).join("");
+            const toParse = chars.slice(index, index + tokenLen).join("");
+            const r = chars.slice(index + tokenLen).join("");
+
+            if (inline) {
+              let tem;
+              const html = marked.parseInline(
+                (tem = toParse.replace(/&nbsp;/g, " "))
+              );
+              console.log({ html, l, r, toParse });
+
+              parentElement.innerHTML = l + html + r;
+              selection.collapse(
+                parentElement,
+                !l && !r
+                  ? parentElement.childNodes.length
+                  : !r
+                  ? parentElement.childNodes.length
+                  : 1
+              );
+            } else {
+              let html = marked.parse(toParse.replace(/&nbsp;/g, " "));
+              html = html.replace(/(?<=>).*(?=<\/)/, "\u200b");
+
+              console.log({ html, l, r, toParse });
+
+              parentElement.innerHTML = l + html + r;
+              selection.collapse(
+                parentElement,
+                !l && !r
+                  ? parentElement.childNodes.length
+                  : !r
+                  ? parentElement.childNodes.length
+                  : 1
+              );
+            }
+          }
         }
-        const html = parser(tail + "1");
-        console.warn({ html, inline });
-        const dom = document.createElement("div");
-        dom.innerHTML = html;
-        const toInsert = dom.children;
-        // console.log(toInsert, dom.children);
-        
-        insertAfter(...toInsert,  anchorNode.parentElement)
-        anchorNode.remove()
-
-      }
-      // if (found) {
-
-      //   const parentElement = anchorNode.parentElement;
-      //   parentElement.innerHTML = html;
-      //   // anchorNode.remove();
-      //   setTimeout(() => {
-      //     selection.collapseToEnd(parentElement, 2);
-      //   }, 25);
-      // }
-      // const { code, key } = e;
-      // console.log({ code, key });
-      // if (clearKeys.indexOf(key) > -1) {
-      //   token = "";
-      // } else if (key === "Backspace") {
-      //   token[token.length - 1] = "";
-      // } else if (ignoreKeys.indexOf(key) > -1) {
-      // } else if (key === " ") {
-      //   token += key;
-
-      //   console.log(token);
-      //   let found = false;
-      //   let inline = false;
-      //   for (let i = 0, len = rules.length; i < len && !found; i++) {
-      //     if (token.match(rules[i])) {
-      //       if (i === 0) inline = false;
-      //       else inline = true;
-      //       found = true;
-      //       break;
-      //     }
-      //   }
-      //   const parser = marked[inline ? "parseInline" : "parse"];
-      //   const parsed = parser(token);
-      //   console.log({ parsed });
-      //   // if (token !== parsed) {
-      //   //   const { anchorNode } = window.getSelection();
-      //   //   const { parentElement } = anchorNode;
-      //   //   const div = document.createElement("div");
-      //   //   div.innerHTML = parsed;
-      //   //   parentElement.insertBefore(div.childNodes, anchorNode.nextSibling);
-      //   //   anchorNode.remove();
-      //   // }
-      // } else {
-      //   token += key;
-      // }
-    }, 25);
-  });
+      });
+    },
+    25
+  );
 
   editor.addEventListener("paste", (e) => {
     const selection = window.getSelection();
@@ -157,11 +155,11 @@ window.onload = function () {
         fileReader.onload = function (e) {
           var img = new Image();
           img.src = e.target.result;
-          if (parentElement) {
-            parentElement.insertBefore(img, anchorNode.nextSibling);
-          } else {
-            editor.appendChild(img);
-          }
+          // if (parentElement) {
+          //   parentElement.insertBefore(img, anchorNode.nextSibling);
+          // } else {
+          // }
+          editor.appendChild(img);
         };
 
         fileReader.readAsDataURL(f);
