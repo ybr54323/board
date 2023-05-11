@@ -22,106 +22,103 @@ window.onload = function () {
 
   const rules = [
     // # foo
-    /#+(\s|&nbsp;)/,
+    ["h", /(#+)(\s|&nbsp;)/g],
     // *foo*
-    /(\*+)\S+\1(\s|&nbsp;)/g,
+    ["*", /(\*+)([^\s\*]+)\1\s/g],
     // // 1. foo
-    /\d+\.(\s|&nbsp;)\S+/,
+    ["", /\d+\.(\s|&nbsp;)\S+/],
     // // -. foo
-    /-\.(\s|&nbsp;)\S+/,
+    ["", /-\.(\s|&nbsp;)\S+/],
     // // ~foo~
-    /(~+)\w+\1(\s|&nbsp;)/,
+    ["", /(~+)\w+\1(\s|&nbsp;)/],
     // // `foo`
-    /(`+)\w+\1(\s|&nbsp;)/,
+    ["", /(`+)\w+\1(\s|&nbsp;)/],
   ];
 
-  editor.addEventListener(
-    "keypress",
-    function (e) {
-      setTimeout(function () {
-        const selection = window.getSelection();
+  editor.addEventListener("keypress", function (e) {
+    setTimeout(function () {
+      const selection = window.getSelection();
 
-        const { anchorNode } = selection;
+      const { anchorNode } = selection;
 
-        const { nodeType } = anchorNode;
-
-        /**
-         * 在offset为0时的selection
-         */
-        if (nodeType === 1) {
-          console.log((anchorNode.outerHTML = "<div class='none'><br></div>"));
+      const { nodeType } = anchorNode;
+      let parent;
+      if (anchorNode.data === void 0) {
+        const childNodes = anchorNode.parentElement.childNodes;
+        // 真实的parent
+        parent = childNodes[childNodes.length - 1];
+      } else {
+        parent = anchorNode.parentElement;
+      }
+      // console.log(anchorNode.data, anchorNode.parentElement.childNodes, parent);
+      const tokens = [];
+      let found;
+      for (let i = 0, len = rules.length; i < len; i++) {
+        const [tag, rule] = rules[i];
+        let exec;
+        // let exec = rule.exec(anchorNode.data);
+        while ((exec = rule.exec(anchorNode.data))) {
+          fount = true;
+          // console.log(exec);
+          tokens.push([tag, exec]);
         }
-        /**
-         * 在offset为>0时的selection
-         */
-        if (nodeType === 3) {
-          const { parentElement, textContent } = anchorNode;
-          console.log({ textContent, parentElement: parentElement.innerHTML });
-          let found = false;
-          let exec;
-          let inline;
-          let outerIndex;
-          let index;
-          let tokenLen = 0;
+        if (found) break;
+      }
+      if (tokens.length) {
+        const fragment = document.createDocumentFragment();
 
-          for (let i = 0, len = rules.length; i < len; i++) {
-            const rule = rules[i];
-            exec = rule.exec(parentElement.innerHTML);
-            if (exec) {
-              index = exec.index;
-              found = true;
-              console.log(exec);
-              tokenLen = exec[0].length;
-              rule.lastIndex = 0;
-              inline = i !== 0 && i !== 2;
-              outerIndex = i;
-              break;
-            }
+        let ref;
+        for (let [tag, exec] of tokens) {
+          if (tag === "h") {
+            ref = document.createElement(`h${exec[0].length}`);
+            ref.innerHTML = "<br>";
+
+            fragment.appendChild(ref);
+            parent.append(fragment);
+            anchorNode.remove();
+            selection.collapse(ref);
           }
-          if (found) {
-            const chars = parentElement.innerHTML.split("");
-            const l = chars.slice(0, index).join("");
-            const toParse = chars.slice(index, index + tokenLen).join("");
-            const r = chars.slice(index + tokenLen).join("");
-
-            if (inline) {
-              let tem;
-              const html = marked.parseInline(
-                (tem = toParse.replace(/&nbsp;/g, " "))
-              );
-              console.log({ html, l, r, toParse });
-
-              parentElement.innerHTML = l + html + r;
-              selection.collapse(
-                parentElement,
-                !l && !r
-                  ? parentElement.childNodes.length
-                  : !r
-                  ? parentElement.childNodes.length
-                  : 1
-              );
-            } else {
-              let html = marked.parse(toParse.replace(/&nbsp;/g, " "));
-              html = html.replace(/(?<=>).*(?=<\/)/, "\u200b");
-
-              console.log({ html, l, r, toParse });
-
-              parentElement.innerHTML = l + html + r;
-              selection.collapse(
-                parentElement,
-                !l && !r
-                  ? parentElement.childNodes.length
-                  : !r
-                  ? parentElement.childNodes.length
-                  : 1
-              );
+          if (tag === "*") {
+            let innerHTML;
+            const pHtml = parent.innerHTML;
+            innerHTML = pHtml.replace(/(\*+)([^\s\*]+)\1/, "<em>$2</em>");
+            const div = document.createElement("div");
+            div.innerHTML = innerHTML;
+            console.log(div.children);
+            parent.innerHTML = innerHTML;
+            for (let node of parent.childNodes) {
+              if (node.textContent == div.children[0].textContent) {
+                selection.collapse(node);
+                break;
+              }
             }
+            // selection.collapse(parent, parent.childNodes.length);
+
+            // selection.collapse(editor, 2)
+            // parent.append(ref);
+            // anchorNode.data += exec[2];
+
+            // selection.collapse(ref);
+            // ref = document.createElement("div");
+            // ref.innerHTML = marked.parseInline(exec[0]);
+
+            // let index = 0;
+
+            // if (!anchorNode.nextSibling) {
+            //   parent.append(...ref.childNodes);
+            //   index = parent.childNodes.length - 1;
+            // } else {
+            //   parent.insertBefore(...ref.childNodes, anchorNode.nextSibling);
+            //   index = [parent.childNodes].find((node) => node === anchorNode);
+            // }
+
+            // anchorNode.remove();
+            // selection.collapse(parent, index);
           }
         }
-      });
-    },
-    25
-  );
+      }
+    }, 100);
+  });
 
   editor.addEventListener("paste", (e) => {
     const selection = window.getSelection();
