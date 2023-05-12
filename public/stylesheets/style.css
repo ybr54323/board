@@ -30,3 +30,6 @@ a {
 .none  {
   font-style: unset;
 }
+i {
+  font-size: none;
+}

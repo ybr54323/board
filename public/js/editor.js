@@ -16,24 +16,68 @@ function insertAfter(newElement, targetElement) {
     parentElement.insertBefore(newElement, targetElement.nextSibling);
   }
 }
+const rules = [
+  // # foo
+  ["h", /(#+)(\s|&nbsp;)/g],
+  // *foo*
+  ["*", /(\*+)([^\s\*]+)\1\s/g],
+  // // 1. foo
+  ["", /\d+\.(\s|&nbsp;)\S+/],
+  // // -. foo
+  ["", /-\.(\s|&nbsp;)\S+/],
+  // // ~foo~
+  ["", /(~+)\w+\1(\s|&nbsp;)/],
+  // // `foo`
+  ["", /(`+)\w+\1(\s|&nbsp;)/],
+];
 
 window.onload = function () {
-  const f = document.querySelector("#board");
+  const test = document.querySelector("#test");
+  test.addEventListener("keypress", function (e) {
+    setTimeout(() => {
+      const { key } = e;
+      if (key === "Enter") {
+      } else {
+        const selection = window.getSelection();
+        console.log(selection.anchorNode.data);
+        const data = selection.anchorNode.data;
+        // console.log(sel.anchorNode.parentNode.innerHTML);
+        let found = false;
 
-  const rules = [
-    // # foo
-    ["h", /(#+)(\s|&nbsp;)/g],
-    // *foo*
-    ["*", /(\*+)([^\s\*]+)\1\s/g],
-    // // 1. foo
-    ["", /\d+\.(\s|&nbsp;)\S+/],
-    // // -. foo
-    ["", /-\.(\s|&nbsp;)\S+/],
-    // // ~foo~
-    ["", /(~+)\w+\1(\s|&nbsp;)/],
-    // // `foo`
-    ["", /(`+)\w+\1(\s|&nbsp;)/],
-  ];
+        const tokens = [];
+        for (let i = 0; i < rules.length; i++) {
+          const [tag, rule] = rules[i];
+          let exec;
+          while ((exec = rule.exec(data))) {
+            tokens.push([tag, exec]);
+          }
+        }
+
+        let temp = "";
+        for (let i = 0; i < tokens.length; i++) {
+          const [tag, exec] = tokens[i];
+          const { input, index } = exec;
+          if (tag === "*") {
+            temp +=
+              input.slice(0, index) + "\u200b" + marked.parseInline(exec[0]);
+            "\u200b" + input.slice(index + exec[0].length);
+            const elm = document.createElement("span");
+            elm.innerHTML = temp;
+            selection.anchorNode.parentElement.insertBefore(
+              elm,
+              selection.anchorNode
+            );
+            selection.anchorNode.remove();
+            selection.collapse(
+              selection.anchorNode.parentElement,
+              [...selection.anchorNode.parentElement.childNodes].indexOf(elm)
+            );
+          }
+        }
+      }
+    });
+  });
+  const f = document.querySelector("#board");
 
   editor.addEventListener("keypress", function (e) {
     setTimeout(function () {
@@ -50,6 +94,7 @@ window.onload = function () {
       } else {
         parent = anchorNode.parentElement;
       }
+
       // console.log(anchorNode.data, anchorNode.parentElement.childNodes, parent);
       const tokens = [];
       let found;
@@ -70,50 +115,78 @@ window.onload = function () {
         let ref;
         for (let [tag, exec] of tokens) {
           if (tag === "h") {
-            ref = document.createElement(`h${exec[0].length}`);
-            ref.innerHTML = "<br>";
-
-            fragment.appendChild(ref);
-            parent.append(fragment);
-            anchorNode.remove();
-            selection.collapse(ref);
+            const nodes = Array.from(parent.childNodes);
+            let left = [];
+            let right = [];
+            for (let i = 0, len = nodes.length; i < len; i++) {
+              const node = nodes[i];
+              if (node === anchorNode) {
+                if (i > 0) {
+                  left = nodes.slice(0, i);
+                }
+                if (i < len - 1) {
+                  right = nodes.slice(i + 1);
+                }
+              }
+              const h = document.createElement("h" + exec[1].length);
+              h.innerText = exec[0].slice(exec[1].length);
+              parent.innerHTML =
+                left.map((node) => node.outerHTML) +
+                h.outerHTML +
+                right.map((node) => node.outerHTML);
+            }
           }
           if (tag === "*") {
-            let innerHTML;
-            const pHtml = parent.innerHTML;
-            innerHTML = pHtml.replace(/(\*+)([^\s\*]+)\1/, "<em>$2</em>");
-            const div = document.createElement("div");
-            div.innerHTML = innerHTML;
-            console.log(div.children);
-            parent.innerHTML = innerHTML;
-            for (let node of parent.childNodes) {
-              if (node.textContent == div.children[0].textContent) {
-                selection.collapse(node);
-                break;
+            const nodes = Array.from(parent.childNodes);
+            let left = [];
+            let right = [];
+            for (let i = 0, len = nodes.length; i < len; i++) {
+              const node = nodes[i];
+              if (node === anchorNode) {
+                if (i > 0) {
+                  left = nodes.slice(0, i);
+                }
+                if (i < len - 1) {
+                  right = nodes.slice(i + 1);
+                }
               }
+
+              let leftData = exec.input.slice(0, exec.index);
+              let tags;
+              switch (exec[1].length) {
+                case 1:
+                  tags = ["em"];
+                  break;
+                case 2:
+                  tags = ["strong"];
+                  break;
+                case 3:
+                  tags = ["em", "strong"];
+                  break;
+                default:
+                  tags = ["em"];
+                  break;
+              }
+
+              // //case1
+              // let ref;
+              // let head;
+              // for (let i = 0, len = tags.length; i < len; i++) {
+              //   const tag = tags[i];
+              //   const cur = document.createElement(tag);
+              //   if (!head) head = cur;
+              //   if (ref) ref.append(cur);
+              //   ref = cur;
+              // }
+
+              // console.log(window.getSelection());
+              // console.log({ exec, data: anchorNode.data });
+
+              // anchorNode.data = anchorNode.data.replace(/\*/g, "");
+              // ref.append(anchorNode);
+              // parent.append(head);
+              // selection.collapse(anchorNode, exec.index + exec[2].length);
             }
-            // selection.collapse(parent, parent.childNodes.length);
-
-            // selection.collapse(editor, 2)
-            // parent.append(ref);
-            // anchorNode.data += exec[2];
-
-            // selection.collapse(ref);
-            // ref = document.createElement("div");
-            // ref.innerHTML = marked.parseInline(exec[0]);
-
-            // let index = 0;
-
-            // if (!anchorNode.nextSibling) {
-            //   parent.append(...ref.childNodes);
-            //   index = parent.childNodes.length - 1;
-            // } else {
-            //   parent.insertBefore(...ref.childNodes, anchorNode.nextSibling);
-            //   index = [parent.childNodes].find((node) => node === anchorNode);
-            // }
-
-            // anchorNode.remove();
-            // selection.collapse(parent, index);
           }
         }
       }
