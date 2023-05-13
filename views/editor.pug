@@ -1,10 +1,10 @@
 extends layout.pug
 block content
     div(
-        id='editor'
+        id="editor"
+        class="editor"
         contenteditable='true'
-        class='editor'
-    ) !{content}
+    )  !{content}
     button(
         id='submit'
     ) submit
@@ -14,8 +14,4 @@ block content
 
     div(id='board')
 
-    div(
-        id="test"
-        contenteditable='true'
-    ) 
       

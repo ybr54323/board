@@ -18,31 +18,29 @@ function insertAfter(newElement, targetElement) {
 }
 const rules = [
   // # foo
-  ["h", /(#+)(\s|&nbsp;)/g],
+  ["h", /(#+)(\s|&nbsp;)(\w+)?/g],
   // *foo*
   ["*", /(\*+)([^\s\*]+)\1\s/g],
   // // 1. foo
-  ["", /\d+\.(\s|&nbsp;)\S+/],
-  // // -. foo
-  ["", /-\.(\s|&nbsp;)\S+/],
+  ["ol", /\d+\.(\s|&nbsp;)\S+/g],
+  // // - foo
+  ["dl", /-(\s|&nbsp;)\S+/g],
   // // ~foo~
-  ["", /(~+)\w+\1(\s|&nbsp;)/],
+  ["~", /(~+)\w+\1(\s|&nbsp;)/g],
   // // `foo`
-  ["", /(`+)\w+\1(\s|&nbsp;)/],
+  ["`", /(`+)\w+\1(\s|&nbsp;)/g],
 ];
 
 window.onload = function () {
-  const test = document.querySelector("#test");
-  test.addEventListener("keypress", function (e) {
+  const editor = document.querySelector("#editor");
+  editor.addEventListener("keypress", function (e) {
     setTimeout(() => {
       const { key } = e;
       if (key === "Enter") {
       } else {
         const selection = window.getSelection();
-        console.log(selection.anchorNode.data);
+        console.log(selection.anchorNode.data)
         const data = selection.anchorNode.data;
-        // console.log(sel.anchorNode.parentNode.innerHTML);
-        let found = false;
 
         const tokens = [];
         for (let i = 0; i < rules.length; i++) {
@@ -54,144 +52,49 @@ window.onload = function () {
         }
 
         let temp = "";
-        for (let i = 0; i < tokens.length; i++) {
+
+        for (let i = 0, len = tokens.length; i < len; i++) {
           const [tag, exec] = tokens[i];
           const { input, index } = exec;
+
+          if (i === 0) temp += input.slice(0, index);
           if (tag === "*") {
-            temp +=
-              input.slice(0, index) + "\u200b" + marked.parseInline(exec[0]);
-            "\u200b" + input.slice(index + exec[0].length);
-            const elm = document.createElement("span");
-            elm.innerHTML = temp;
-            selection.anchorNode.parentElement.insertBefore(
-              elm,
-              selection.anchorNode
-            );
-            selection.anchorNode.remove();
-            selection.collapse(
-              selection.anchorNode.parentElement,
-              [...selection.anchorNode.parentElement.childNodes].indexOf(elm)
-            );
+            temp += marked.parseInline(exec[0]);
           }
+          if (tag === "h") {
+            temp += marked.parse(exec[0] + "\u200b");
+          }
+          if (tag === "~") {
+            temp += marked.parseInline(exec[0]);
+          }
+          if (tag === 'ol' || tag === 'dl') {
+            temp += marked.parse(exec[0])
+          }
+          if (i >= 0 && i < len - 1) {
+            const [nextTag, nextExec] = tokens[i + 1];
+            const { index: nextIndex } = nextExec;
+            // 到下一个token的间隙
+            temp += input.slice(index + exec[0].length, nextIndex);
+          }
+          if (i === len - 1) temp += input.slice(index + exec[0].length);
         }
+        if (temp) {
+          const elm = document.createElement("span");
+          elm.innerHTML = temp;
+          selection.anchorNode.parentElement.insertBefore(
+            elm,
+            selection.anchorNode
+          );
+          selection.anchorNode.remove();
+        }
+        // selection.collapse(
+        //   selection.anchorNode.parentElement,
+        //   [...selection.anchorNode.parentElement.childNodes].indexOf(elm)
+        // );
       }
     });
   });
   const f = document.querySelector("#board");
-
-  editor.addEventListener("keypress", function (e) {
-    setTimeout(function () {
-      const selection = window.getSelection();
-
-      const { anchorNode } = selection;
-
-      const { nodeType } = anchorNode;
-      let parent;
-      if (anchorNode.data === void 0) {
-        const childNodes = anchorNode.parentElement.childNodes;
-        // 真实的parent
-        parent = childNodes[childNodes.length - 1];
-      } else {
-        parent = anchorNode.parentElement;
-      }
-
-      // console.log(anchorNode.data, anchorNode.parentElement.childNodes, parent);
-      const tokens = [];
-      let found;
-      for (let i = 0, len = rules.length; i < len; i++) {
-        const [tag, rule] = rules[i];
-        let exec;
-        // let exec = rule.exec(anchorNode.data);
-        while ((exec = rule.exec(anchorNode.data))) {
-          fount = true;
-          // console.log(exec);
-          tokens.push([tag, exec]);
-        }
-        if (found) break;
-      }
-      if (tokens.length) {
-        const fragment = document.createDocumentFragment();
-
-        let ref;
-        for (let [tag, exec] of tokens) {
-          if (tag === "h") {
-            const nodes = Array.from(parent.childNodes);
-            let left = [];
-            let right = [];
-            for (let i = 0, len = nodes.length; i < len; i++) {
-              const node = nodes[i];
-              if (node === anchorNode) {
-                if (i > 0) {
-                  left = nodes.slice(0, i);
-                }
-                if (i < len - 1) {
-                  right = nodes.slice(i + 1);
-                }
-              }
-              const h = document.createElement("h" + exec[1].length);
-              h.innerText = exec[0].slice(exec[1].length);
-              parent.innerHTML =
-                left.map((node) => node.outerHTML) +
-                h.outerHTML +
-                right.map((node) => node.outerHTML);
-            }
-          }
-          if (tag === "*") {
-            const nodes = Array.from(parent.childNodes);
-            let left = [];
-            let right = [];
-            for (let i = 0, len = nodes.length; i < len; i++) {
-              const node = nodes[i];
-              if (node === anchorNode) {
-                if (i > 0) {
-                  left = nodes.slice(0, i);
-                }
-                if (i < len - 1) {
-                  right = nodes.slice(i + 1);
-                }
-              }
-
-              let leftData = exec.input.slice(0, exec.index);
-              let tags;
-              switch (exec[1].length) {
-                case 1:
-                  tags = ["em"];
-                  break;
-                case 2:
-                  tags = ["strong"];
-                  break;
-                case 3:
-                  tags = ["em", "strong"];
-                  break;
-                default:
-                  tags = ["em"];
-                  break;
-              }
-
-              // //case1
-              // let ref;
-              // let head;
-              // for (let i = 0, len = tags.length; i < len; i++) {
-              //   const tag = tags[i];
-              //   const cur = document.createElement(tag);
-              //   if (!head) head = cur;
-              //   if (ref) ref.append(cur);
-              //   ref = cur;
-              // }
-
-              // console.log(window.getSelection());
-              // console.log({ exec, data: anchorNode.data });
-
-              // anchorNode.data = anchorNode.data.replace(/\*/g, "");
-              // ref.append(anchorNode);
-              // parent.append(head);
-              // selection.collapse(anchorNode, exec.index + exec[2].length);
-            }
-          }
-        }
-      }
-    }, 100);
-  });
 
   editor.addEventListener("paste", (e) => {
     const selection = window.getSelection();
