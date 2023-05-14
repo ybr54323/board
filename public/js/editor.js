@@ -2,99 +2,93 @@ const editor = document.querySelector("#editor");
 const button = document.querySelector("#submit");
 
 const axios = new window.axios.create();
-/**
- * 
- * 
- * 
 
- */
-function insertAfter(newElement, targetElement) {
-  const parentElement = targetElement.parentElement;
-  if (parentElement.lastChild === targetElement) {
-    parentElement.appendChild(newElement);
-  } else {
-    parentElement.insertBefore(newElement, targetElement.nextSibling);
-  }
-}
 const rules = [
   // # foo
   ["h", /(#+)(\s|&nbsp;)(\w+)?/g],
   // *foo*
   ["*", /(\*+)([^\s\*]+)\1\s/g],
-  // // 1. foo
+  //  1. foo
   ["ol", /\d+\.(\s|&nbsp;)\S+/g],
-  // // - foo
+  //  - foo
   ["dl", /-(\s|&nbsp;)\S+/g],
-  // // ~foo~
+  //  ~foo~
   ["~", /(~+)\w+\1(\s|&nbsp;)/g],
-  // // `foo`
+  //  `foo`
   ["`", /(`+)\w+\1(\s|&nbsp;)/g],
+  /**
+   * foo
+   * ---
+   * /
+   * foo
+   * ===
+   */
+  ["-", /(-+)(\s|&nbsp;)/g],
+  ["=", /(=+)(\s|&nbsp;)/g],
 ];
 
 window.onload = function () {
   const editor = document.querySelector("#editor");
+
+  function findLine(node) {
+    while (
+      node &&
+      !node.previousElementSibling &&
+      node.parentElement !== editor
+    ) {
+      node = node.parentElement;
+    }
+    return node;
+  }
+  const board = document.querySelector("#board");
+
   editor.addEventListener("keypress", function (e) {
+    
     setTimeout(() => {
       const { key } = e;
       if (key === "Enter") {
+        
       } else {
         const selection = window.getSelection();
-        console.log(selection.anchorNode.data)
         const data = selection.anchorNode.data;
 
-        const tokens = [];
-        for (let i = 0; i < rules.length; i++) {
-          const [tag, rule] = rules[i];
-          let exec;
-          while ((exec = rule.exec(data))) {
-            tokens.push([tag, exec]);
-          }
-        }
+        const temp = rules.reduce(function (result, [tag, rule]) {
+          return result.replace(rule, function (match, p1) {
+            if (tag === "h") return marked.parse(match + "\u200b");
+            if (tag === "*") return marked.parseInline(match);
+            if (tag === "ol" || tag === "dl") return marked.parse(match);
+            if (tag === "~") return marked.parseInline(match);
+            if (tag === "`") return marked.parseInline(match);
+            if (tag === "-" || tag === "=") {
+              setTimeout(() => {
+                const preLine = findLine(
+                  selection.anchorNode
+                ).previousElementSibling;
+                if (!preLine || !preLine.innerHTML) return;
+                const temp = preLine.innerHTML + "\n" + p1;
+                console.log(temp);
+                preLine.innerHTML = marked.parse(temp);
+                selection.anchorNode.remove();
+                selection.collapse(preLine, 1);
+              });
+              return match;
+            }
+          });
+        }, data);
+        if (temp === data) return;
+        const elm = document.createElement("span");
+        elm.innerHTML = temp;
 
-        let temp = "";
+        console.warn()
+        selection.anchorNode.parentElement.insertBefore(
+          elm,
+          selection.anchorNode
+        );
 
-        for (let i = 0, len = tokens.length; i < len; i++) {
-          const [tag, exec] = tokens[i];
-          const { input, index } = exec;
-
-          if (i === 0) temp += input.slice(0, index);
-          if (tag === "*") {
-            temp += marked.parseInline(exec[0]);
-          }
-          if (tag === "h") {
-            temp += marked.parse(exec[0] + "\u200b");
-          }
-          if (tag === "~") {
-            temp += marked.parseInline(exec[0]);
-          }
-          if (tag === 'ol' || tag === 'dl') {
-            temp += marked.parse(exec[0])
-          }
-          if (i >= 0 && i < len - 1) {
-            const [nextTag, nextExec] = tokens[i + 1];
-            const { index: nextIndex } = nextExec;
-            // 到下一个token的间隙
-            temp += input.slice(index + exec[0].length, nextIndex);
-          }
-          if (i === len - 1) temp += input.slice(index + exec[0].length);
-        }
-        if (temp) {
-          const elm = document.createElement("span");
-          elm.innerHTML = temp;
-          selection.anchorNode.parentElement.insertBefore(
-            elm,
-            selection.anchorNode
-          );
-          selection.anchorNode.remove();
-        }
-        // selection.collapse(
-        //   selection.anchorNode.parentElement,
-        //   [...selection.anchorNode.parentElement.childNodes].indexOf(elm)
-        // );
+        selection.anchorNode.remove();
       }
     });
   });
-  const f = document.querySelector("#board");
 
   editor.addEventListener("paste", (e) => {
     const selection = window.getSelection();
