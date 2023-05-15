@@ -1,10 +1,11 @@
 extends layout.pug
 block content
     div(
-        id='editor'
+        id="editor"
+        class="editor"
         contenteditable='true'
-        class='editor'
-    ) !{content}
+    )  
+        div(   style="min-height:1rem") !{content}
     button(
         id='submit'
     ) submit
@@ -12,10 +13,10 @@ block content
     script(src="https://cdn.bootcdn.net/ajax/libs/marked/4.3.0/marked.min.js") 
     script(src="/js/editor.js") 
 
-    div(id='board')
+    div(id='board'
 
-    div(
-        id="test"
-        contenteditable='true'
-    ) 
-      
+
+    contenteditable='true'
+    )
+
+
