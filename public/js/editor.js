@@ -40,7 +40,6 @@ window.onload = function () {
     }
     return node;
   }
-  const board = document.querySelector("#board");
 
   editor.addEventListener("keypress", function (e) {
     
