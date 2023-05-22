@@ -33,7 +33,7 @@ app.use(express.static(path.join(__dirname, "public")));
 
 app.use("/", indexRouter);
 app.use("/user", usersRouter);
-app.use("/editor", editorRouter);
+// app.use("/editor", editorRouter);
 app.use("/", commonRouter);
 
 // catch 404 and forward to error handler

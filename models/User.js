@@ -1,5 +1,8 @@
 const { DataTypes, Model, Sequelize } = require("sequelize");
-const sequelize = new Sequelize("sqlite::memory:"); // Example for sqlite
+const sequelize = new Sequelize({
+  dialect: "sqlite3",
+  storage: "../app.db",
+}); // Example for sqlite
 class User extends Model {}
 
 User.init(
@@ -10,12 +13,8 @@ User.init(
       defaultValue: DataTypes.UUIDV1,
     },
     name: DataTypes.TEXT,
-    favoriteColor: {
-      type: DataTypes.TEXT,
-      defaultValue: "green",
-    },
-    age: DataTypes.INTEGER,
-    cash: DataTypes.INTEGER,
+    password: DataTypes.STRING,
+    email: { type: DataTypes.STRING, unique: true, allowNull: false },
   },
   { sequelize, modelName: "user" }
 );
