@@ -1,9 +1,6 @@
 const { DataTypes, Model, Sequelize } = require("sequelize");
+const sequelize = require('./SequelizeInstance')
 
-const sequelize = new Sequelize({
-  dialect: "sqlite3",
-  storage: "../app.db",
-}); // Example for sqlite
 class Article extends Model {}
 Article.init(
   {
@@ -38,6 +35,6 @@ Article.init(
     indexes: [{ unique: true, fields: ["id"] }],
   }
 );
-Article.sync({ alter: true, logging: false });
+Article.sync({ alter: true, logging: false })
 
 module.exports = Article;

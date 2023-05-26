@@ -1,8 +1,5 @@
 const { DataTypes, Model, Sequelize } = require("sequelize");
-const sequelize = new Sequelize({
-  dialect: "sqlite3",
-  storage: "../app.db",
-}); // Example for sqlite
+const sequelize =  require('./SequelizeInstance')
 class User extends Model {}
 
 User.init(
